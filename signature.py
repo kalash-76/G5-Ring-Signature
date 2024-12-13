@@ -89,6 +89,10 @@ class GroupMember:
             return False
 
 class GroupSignature:
+    """
+    Acts as the group object and the admin. Not realistic, but for proof of concept and simplicity I went with this.
+    A lot of public variables that would, in real life, be private and encrypted.
+    """
     def __init__(self):
         self.members: Dict[str, GroupMember] = {}
         self.group_key = self._generate_group_key()
@@ -188,12 +192,14 @@ def main():
 
 
     # Add multiple members
-    members = ["Alice", "Bob"] # Legitimate users
+    members = ["Alice", "Bob", "verifier"] # Legitimate users
     for member in members:
         print(f"Adding member: {member}")
         group.add_member(member)
     print("\nAll members added successfully!")
     print(str(group.members))
+
+    verifier = group.members['verifier'] # For testing purposes, the member list is public.
 
     ### Demonstrate message signing by different members
     messages = {
@@ -236,9 +242,7 @@ def main():
     print_separator()
 
     ### Demonstrate signature verification
-    print("Verifying all signatures:")
-    group.add_member("verifier")
-    verifier = group.members['verifier'] # For testing purposes, the member list is public. 
+    print("Verifying all signatures:") 
 
     for member, signature in signatures.items():
         print(f"\nVerifying {member}'s message:")
