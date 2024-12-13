@@ -12,7 +12,9 @@ Institution: University of Southern Mississippi
 ## Instructions
 
 ### Install
-- Run `pip install` on modules: pycryptodome & bitarray
+- Run `pip install` on modules that return a `ModuleNotFoundError`
 
 ### Run
 - `python signature.py`
+
+This will run the demonstration sample code based on the classes and methods I coded.
