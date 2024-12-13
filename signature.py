@@ -8,6 +8,11 @@ import json
 from BloomFilter import BloomFilter, ClusterHead
 from bitarray import bitarray
 
+"""
+This is a very rudimentary scheme for group signature. Obviously in the real world it would be implemented in a way that would actually hide some of the information below
+and would distribute keys in a better way. For the sake of time, sanity, and lack of collaborative efforts on the code, I've implemented it like this.
+    - Kaleb Ashmore
+"""
 
 @dataclass
 class GroupMember:
