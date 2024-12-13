@@ -319,7 +319,7 @@ def main():
         print(f"Verification result: {'Valid' if is_valid else 'Invalid'}")
 
     print("\nRevoking Bob and adding to bloom filter")
-    bloom2.add("Bob")
+    bloom2.add("Bob") # overly simple implementation compared to the other method, but gets the point across.
     signature, message = cluster_2.sign_bloom_filter(bloom2)
     is_verified = group.cluster.verify_bloom_filter(signature=signature, message=message, cluster=cluster_2)
     if is_verified:
