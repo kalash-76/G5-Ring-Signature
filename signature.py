@@ -21,18 +21,18 @@ class GroupSignature:
         self.members: Dict[str, GroupMember] = {}
         self.group_key = self._generate_group_key()
         self.bloom1 = BloomFilter(500, 3)
-        self.bloom_pub, priv = self.bloom1.generate_keys()
-        self.cluster = ClusterHead(self.bloom_pub, priv)
+        self.bloom_pub, self.priv = self.bloom1.generate_keys()
+        self.cluster = ClusterHead(self.bloom_pub, self.priv)
 
         
-    def _generate_group_key(self) -> rsa.RSAPrivateKey:
+    def _generate_group_key(self):
         """Generate the group's master private key"""
         return rsa.generate_private_key(
             public_exponent=65537,
             key_size=2048
         )
 
-    def add_member(self, member_id: str) -> None:
+    def add_member(self, member_id: str):
         """Add a new member to the group"""
         private_key = rsa.generate_private_key(
             public_exponent=65537,
@@ -46,12 +46,12 @@ class GroupSignature:
             public_key=public_key
         )
     
-    def sign_message(self, member_id: str, message: str) -> dict:
+    def sign_message(self, member_id: str, message: str):
         """Sign a message using member's key and group key"""
         if member_id not in self.members:
             raise ValueError(f"Member {member_id} not found in group")
             
-        # First sign with member's key
+        # First sign with member's private key
         member = self.members[member_id]
         message_bytes = message.encode()
         
@@ -81,7 +81,7 @@ class GroupSignature:
             'group_signature': base64.b64encode(group_signature).decode('utf-8')
         }
     
-    def verify_signature(self, signature_data: dict) -> bool:
+    def verify_signature(self, signature_data: dict):
         """Verify both member and group signatures"""
         try:
             member_id = signature_data['member_id']
@@ -94,7 +94,7 @@ class GroupSignature:
 
             # Verify that they are not revoked users.
             if self.bloom1.check(member_id):
-                print("User is REVOKED")
+                print(f"User \"{member_id}\" is REVOKED")
                 return False
                 
             member = self.members[member_id]
@@ -132,19 +132,6 @@ class GroupSignature:
         except (KeyError, ValueError):
             return False
 
-    def export_member_key(self, member_id: str) -> str:
-        """Export a member's private key in PEM format"""
-        if member_id not in self.members:
-            raise ValueError(f"Member {member_id} not found in group")
-            
-        private_key = self.members[member_id].private_key
-        pem = private_key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption()
-        )
-        return pem.decode('utf-8')
-
 def print_separator():
     print("\n" + "="*50 + "\n")
 
@@ -155,17 +142,12 @@ def main():
     print("Group created successfully!")
     print_separator()
 
-    # Bloom Filter 
-    # chead1_key = rsa.generate_private_key(
-    #         public_exponent=65537,
-    #         key_size=2048
-    #     )
     size = 500  # Size of the Bloom filter
     hash_count = 3  # Number of hash functions
     bloom2 = BloomFilter(size, hash_count)
 
-    _, chead2_priv = bloom2.generate_keys()
-    cluster_2 = ClusterHead(group.bloom_pub, chead2_priv)
+    # _, chead2_priv = bloom2.generate_keys()
+    cluster_2 = ClusterHead(group.bloom_pub, group.priv)
 
 
     # Add multiple members
@@ -232,6 +214,7 @@ def main():
 
     #### Demonstrate Bloom Filter Revocation
     # Cluster 1 revokes members
+    print("Revoking Alice and adding to bloom filter")
     revoked_members = ["Alice"]
     for member in revoked_members:
         group.bloom1.add(member)
@@ -255,6 +238,29 @@ def main():
         print("Cluster 2: Bloom filter updated")
     else:
         print("Cluster 2: Verification failed")
+
+    print("Verifying all signatures post revocation:")
+    for member, signature in signatures.items():
+        is_valid = group.verify_signature(signature)
+        print(f"\nVerifying {member}'s message:")
+        print(f"Message: '{signature['message']}'")
+        print(f"Verification result: {'Valid' if is_valid else 'Invalid'}")
+
+    print("\nRevoking Bob and adding to bloom filter")
+    bloom2.add("Bob")
+    signature, message = cluster_2.sign_bloom_filter(bloom2)
+    is_verified = group.cluster.verify_bloom_filter(signature=signature, message=message)
+    if is_verified:
+        print("Cluster 1: Verified Cluster 2's Bloom Filter")
+        received_bloom = BloomFilter(size, hash_count)
+        received_bloom.bit_array = bitarray()
+        received_bloom.bit_array.frombytes(message)
+        received_bloom.bit_array = received_bloom.bit_array[:size]
+
+        group.bloom1.merge(received_bloom)
+        print("Cluster 1: Bloom filter updated")
+    else:
+        print("Cluster 1: Verification failed")
 
     print("Verifying all signatures post revocation:")
     for member, signature in signatures.items():
