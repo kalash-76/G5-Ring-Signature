@@ -52,10 +52,10 @@ class ClusterHead:
         signature = pkcs1_15.new(self.private_key).sign(hash_message)
         return signature, message
    
-    def verify_bloom_filter(self, signature, message):
+    def verify_bloom_filter(self, signature, message, cluster):
         hash_message = SHA256.new(message)
         try:
-            pkcs1_15.new(self.group_public_key).verify(hash_message, signature)
+            pkcs1_15.new(cluster.group_public_key).verify(hash_message, signature)
             return True
         except (ValueError, TypeError):
             return False
